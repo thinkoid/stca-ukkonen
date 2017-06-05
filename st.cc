@@ -125,13 +125,16 @@ g_ (const suffix_tree_t< T, U >& t, size_t s, int c) {
 //
 template< typename T, typename U >
 typename suffix_tree_t< T, U >::size_type&
-g_ (suffix_tree_t< T, U >& t, size_t s, int k, int p) {
+g_ (suffix_tree_t< T, U >& t, size_t s, tuple< int, int > ref) {
     using tree_type = suffix_tree_t< T, U >;
 
     using size_type = typename tree_type::size_type;
     using  int_type = typename tree_type::int_type;
 
     using edge_type = typename tree_type::edge_type;
+
+    int_type k, p;
+    tie (k, p) = ref;
 
     size_type ignore, i, *s_ = 0;
     tie (ignore, i) = t.nodes [s];
@@ -259,8 +262,8 @@ test_and_split (
             // Modify existing transition, g'(s,(k',k'+p-k))=r, and create a new
             // transition, g'(r,(k'+p-k+1,p'))=s':
             //
-            g_ (t, s, k_, k_ + p - k) = r;
-            g_ (t, r, k_ + p - k + 1, p_) = s_;
+            g_ (t, s, { k_, k_ + p - k }) = r;
+            g_ (t, r, { k_ + p - k + 1, p_ }) = s_;
 
             return { r, false };
         }
@@ -294,7 +297,7 @@ update (suffix_tree_t< T, U >& t, size_t s, tuple< int, int > ref) {
         //
         // Create new transition g'(r,(i,∞))=r'
         //
-        g_ (t, r, i, (numeric_limits< int_type >::max) ());
+        g_ (t, r, { i, (numeric_limits< int_type >::max) () });
 
         if (oldr != tree_type::root)
             link (t, oldr) = r;
