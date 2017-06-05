@@ -1,0 +1,16 @@
+*~
+*.a
+*.lo
+*.la
+*.o
+*.org
+*.out
+.deps
+.libs
+COPYING
+INSTALL
+GPATH
+GRTAGS
+GTAGS
+test
+
