@@ -29,8 +29,8 @@ LIBS = $(BENCHMARK_LIBS)
 DEPENDDIR = ./.deps
 DEPENDFLAGS = -M
 
-SRCS := $(wildcard *.cpp)
-OBJS := $(patsubst %.cpp,%.o,$(SRCS))
+SRCS := $(wildcard *.cc)
+OBJS := $(patsubst %.cc,%.o,$(SRCS))
 
 TARGETS = test
 
@@ -41,7 +41,7 @@ all: $(TARGETS)
 DEPS = $(patsubst %.o,$(DEPENDDIR)/%.d,$(OBJS))
 -include $(DEPS)
 
-$(DEPENDDIR)/%.d: %.cpp $(DEPENDDIR)
+$(DEPENDDIR)/%.d: %.cc $(DEPENDDIR)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(DEPENDFLAGS) $< >$@
 
 $(DEPENDDIR):
@@ -50,10 +50,10 @@ $(DEPENDDIR):
 test: $(OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-%.o: %.cpp
+%.o: %.cc
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
-%: %.cpp
+%: %.cc
 
 .PHONY: clean
 

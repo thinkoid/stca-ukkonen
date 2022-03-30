@@ -1,9 +1,62 @@
 // -*- mode: c++ -*-
 
+//
+// E. Ukkonen: Constructing suffix trees on-line in linear time.
+// Proc. Information Processing 92, Vol. 1, IFIP Transactions A-12,
+// 484-492, Elsevier 1992.
+//
+
+#ifndef UKKONEN_SUFFIX_TREE_HPP
+#define UKKONEN_SUFFIX_TREE_HPP
+
+#include <iostream>
 #include <limits>
+#include <vector>
 #include <tuple>
 
-#include "st.hpp"
+namespace ukkonen {
+
+template< typename CharT, typename TraitsT = std::char_traits< CharT > >
+struct suffix_tree_t {
+    using traits_type = TraitsT;
+
+    using char_type = typename traits_type::char_type;
+    using  int_type = typename traits_type::int_type;
+    using  pos_type = typename traits_type::pos_type;
+
+    using size_type = size_t;
+
+    using string_type = std::basic_string< char_type, traits_type >;
+    string_type text;
+
+    //
+    // 0: link, 1: transition set index
+    //
+    using node_type = std::tuple< size_type, size_type >;
+    std::vector< node_type > nodes;
+
+    //
+    // 0: transition character, 1: edge index
+    //
+    using transition_type = std::tuple< int_type, size_type >;
+    std::vector< std::vector< transition_type > > transitions;
+
+    //
+    // 0: s, 1: k, 2: p, 3: s'
+    //
+    using edge_type = std::tuple< size_t, int_type, int_type, size_type >;
+    std::vector< edge_type > edges;
+
+    static constexpr size_type aux = 0, root = 1;
+};
+
+template< typename T, typename U >
+/* static */ constexpr typename suffix_tree_t< T, U >::size_type
+suffix_tree_t< T, U >::aux;
+
+template< typename T, typename U >
+/* static */ constexpr typename suffix_tree_t< T, U >::size_type
+suffix_tree_t< T, U >::root;
 
 namespace detail {
 
@@ -25,7 +78,7 @@ template< typename Iterator >
 inline bool
 has_transition (Iterator first, Iterator last, int c) {
     auto iter = find_if (first, last, [&](const auto& arg) {
-            const auto x = get<0> (arg);
+            const auto x = std::get<0> (arg);
             return x == c || x < 0;
         });
 
@@ -57,14 +110,14 @@ template< typename T, typename U >
 inline size_t&
 link (suffix_tree_t< T, U >& t, size_t s) {
     assert (s < t.nodes.size ());
-    return get<0> (t.nodes [s]);
+    return std::get<0> (t.nodes [s]);
 }
 
 template< typename T, typename U >
 inline const size_t&
 link (const suffix_tree_t< T, U >& t, size_t s) {
     assert (s < t.nodes.size ());
-    return get<0> (t.nodes [s]);
+    return std::get<0> (t.nodes [s]);
 }
 
 template< typename T, typename U >
@@ -74,13 +127,13 @@ make_transitions (suffix_tree_t< T, U >& t, size_t s) {
     t.transitions.emplace_back ();
 
     auto& node = t.nodes [s];
-    get<1> (node) = n;
+    std::get<1> (node) = n;
 
     return n;
 }
 
 template< typename T, typename U >
-tuple< size_t, int, int, size_t >
+std::tuple< size_t, int, int, size_t >
 g_ (const suffix_tree_t< T, U >& t, size_t s, int c) {
     using tree_type = suffix_tree_t< T, U >;
 
@@ -103,13 +156,13 @@ g_ (const suffix_tree_t< T, U >& t, size_t s, int c) {
 
         const auto iter = find_if (
             ts.begin (), ts.end (), [&](const auto& arg) {
-                const auto x = get<0> (arg);
+                const auto x = std::get<0> (arg);
                 return c == x;
             });
 
         assert (iter != ts.end ());
 
-        const auto e = get<1> (*iter);
+        const auto e = std::get<1> (*iter);
         assert (e < t.edges.size ());
 
         tie (s, k, p, s_) = t.edges [e];
@@ -125,7 +178,7 @@ g_ (const suffix_tree_t< T, U >& t, size_t s, int c) {
 //
 template< typename T, typename U >
 typename suffix_tree_t< T, U >::size_type&
-g_ (suffix_tree_t< T, U >& t, size_t s, tuple< int, int > ref) {
+g_ (suffix_tree_t< T, U >& t, size_t s, std::tuple< int, int > ref) {
     using tree_type = suffix_tree_t< T, U >;
 
     using size_type = typename tree_type::size_type;
@@ -150,7 +203,7 @@ g_ (suffix_tree_t< T, U >& t, size_t s, tuple< int, int > ref) {
 
     auto iter = find_if (
         ts.begin (), ts.end (), [&](const auto& arg) {
-            const auto x = get<0> (arg);
+            const auto x = std::get<0> (arg);
             return t.text [k] == x;
         });
 
@@ -163,18 +216,18 @@ g_ (suffix_tree_t< T, U >& t, size_t s, tuple< int, int > ref) {
         t.edges.emplace_back (edge_type { s, k, p, { } });
         ts.emplace_back (t.text [k], e);
 
-        s_ = &get<3> (t.edges.back ());
+        s_ = &std::get<3> (t.edges.back ());
     }
     else {
         //
         // Modify the existing transition/edge with incoming arguments:
         //
-        auto& e = t.edges [get<1> (*iter)];
+        auto& e = t.edges [std::get<1> (*iter)];
 
-        get<1> (e) = k;
-        get<2> (e) = p;
+        std::get<1> (e) = k;
+        std::get<2> (e) = p;
 
-        s_ = &get<3> (e);
+        s_ = &std::get<3> (e);
     }
 
     return *s_;
@@ -188,8 +241,8 @@ g_ (suffix_tree_t< T, U >& t, size_t s, tuple< int, int > ref) {
 //
 
 template< typename T, typename U >
-tuple< size_t, int >
-canonize (const suffix_tree_t< T, U >& t, size_t s, tuple< int, int > ref) {
+std::tuple< size_t, int >
+canonize (const suffix_tree_t< T, U >& t, size_t s, std::tuple< int, int > ref) {
     using tree_type = suffix_tree_t< T, U >;
 
     using size_type = typename tree_type::size_type;
@@ -224,9 +277,9 @@ canonize (const suffix_tree_t< T, U >& t, size_t s, tuple< int, int > ref) {
 }
 
 template< typename T, typename U >
-tuple< size_t, bool >
+std::tuple< size_t, bool >
 test_and_split (
-    suffix_tree_t< T, U >& t, size_t s, tuple< int, int > ref, int c) {
+    suffix_tree_t< T, U >& t, size_t s, std::tuple< int, int > ref, int c) {
     using tree_type = suffix_tree_t< T, U >;
 
     using size_type = typename tree_type::size_type;
@@ -274,8 +327,8 @@ test_and_split (
 }
 
 template< typename T, typename U >
-tuple< size_t, int >
-update (suffix_tree_t< T, U >& t, size_t s, tuple< int, int > ref) {
+std::tuple< size_t, int >
+update (suffix_tree_t< T, U >& t, size_t s, std::tuple< int, int > ref) {
     using tree_type = suffix_tree_t< T, U >;
 
     using size_type = typename tree_type::size_type;
@@ -297,7 +350,7 @@ update (suffix_tree_t< T, U >& t, size_t s, tuple< int, int > ref) {
         //
         // Create new transition g'(r,(i,∞))=r'
         //
-        g_ (t, r, { i, (numeric_limits< int_type >::max) () });
+        g_ (t, r, { i, (std::numeric_limits< int_type >::max) () });
 
         if (oldr != tree_type::root)
             link (t, oldr) = r;
@@ -314,4 +367,31 @@ update (suffix_tree_t< T, U >& t, size_t s, tuple< int, int > ref) {
     return { s, k };
 }
 
+} // namespace detail
+
+template< typename T = char, typename U = std::char_traits< T > >
+suffix_tree_t< T, U >
+make_suffix_tree (const typename suffix_tree_t< T, U >::string_type& text) {
+    using tree_type = suffix_tree_t< T, U >;
+    using size_type = typename tree_type::size_type;
+
+    tree_type t {
+        text + T ('~'),
+        { { tree_type::root, 1 }, { tree_type::aux, 0 } },
+        { { }, { { -1, 0 } } },
+        { { tree_type::aux, 0, 0, tree_type::root } }
+    };
+
+    size_type s = tree_type::root;
+
+    for (int k = 0, i = 0; i < int (t.text.size ()); ++i) {
+        tie (s, k) = detail::update   (t, s, { k, i });
+        tie (s, k) = detail::canonize (t, s, { k, i });
+    }
+
+    return t;
 }
+
+} // namespace ukkonen
+
+#endif // UKKONEN_SUFFIX_TREE_HPP

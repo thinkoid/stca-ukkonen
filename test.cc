@@ -10,7 +10,7 @@
 
 using namespace std;
 
-#include "st.hpp"
+#include "st.hh"
 
 const vector< string > test_data {
     "A",
